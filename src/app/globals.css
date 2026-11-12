@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================================
+   Design tokens — Finanças+
+   Fundo cinza-azulado, cards brancos, azul como cor de ação.
+   Verde = receita/positivo · Vermelho = despesa/atraso · Laranja = futuro
+   Roxo = investimento/patrimônio
+   ========================================================================== */
+:root {
+  --background: #f5f7fb;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --subtle: #f8fafc;
+  --border: #e5e9f0;
+  --border-strong: #d6dde8;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #eff4ff;
+  --primary-foreground: #ffffff;
+  --success: #16a34a;
+  --success-soft: #ecfdf3;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --warning: #ea580c;
+  --warning-soft: #fff7ed;
+  --violet: #7c3aed;
+  --violet-soft: #f5f3ff;
+  --ring: #93b4fb;
+  --sidebar: #ffffff;
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-pop: 0 10px 30px rgba(15, 23, 42, 0.1);
+  --radius: 14px;
+}
+
+.dark {
+  --background: #0b1220;
+  --foreground: #e8eef9;
+  --card: #121a2b;
+  --card-foreground: #e8eef9;
+  --popover: #141d30;
+  --muted: #1a2438;
+  --muted-foreground: #93a3bd;
+  --subtle: #162034;
+  --border: #223048;
+  --border-strong: #2c3d59;
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-soft: #16233d;
+  --primary-foreground: #ffffff;
+  --success: #22c55e;
+  --success-soft: #10241a;
+  --danger: #f87171;
+  --danger-soft: #2a1517;
+  --warning: #fb923c;
+  --warning-soft: #2a1b0f;
+  --violet: #a78bfa;
+  --violet-soft: #1d1733;
+  --ring: #3b82f6;
+  --sidebar: #0e1626;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-pop: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle: var(--subtle);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-xl: var(--radius);
+  --radius-2xl: calc(var(--radius) + 4px);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "cv11", "ss01";
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 22%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+}
