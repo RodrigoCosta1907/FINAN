@@ -19,7 +19,7 @@ export type InvoiceRow = {
 };
 
 export type CardInvoice = {
-  issuer: "nubank";
+  issuer: "nubank" | "itau";
   kind: "card_invoice";
   dueDate: string | null;
   periodStart: string | null;

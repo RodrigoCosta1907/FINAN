@@ -13,6 +13,7 @@ import {
   type RawRow,
 } from "../src/lib/import/core.ts";
 import { parseNubankInvoice } from "../src/lib/import/nubank.ts";
+import { parseItauInvoice, resolveYearByDue } from "../src/lib/import/itau.ts";
 
 let failures = 0;
 function check(label: string, condition: boolean, detail = "") {
@@ -158,7 +159,52 @@ const virada = parseNubankInvoice([
 ]);
 check("fatura: período vira o ano (DEZ em fatura de JAN)", virada.rows[0].date === "2026-12-15", virada.rows[0].date);
 
-// ------------------------------------------------------- 8. arquivo real (CLI) --
+// --------------------------------- 9. fatura de cartão em PDF — layout Itaú (duas colunas) --
+// O Itaú escreve dois lançamentos na mesma altura (coluna esquerda e direita).
+// Se as colunas não forem separadas por X, os dois viram uma linha só.
+const at = (x: number, y: number, text: string) => ({ x, y, text });
+const itauPage = {
+  width: 595,
+  height: 840,
+  items: [
+    // linha 1: pagamento (esquerda) e compra (direita) na mesma altura
+    at(143, 700, "20/10"), at(170, 700, "Pagamento via conta"), at(292, 700, "-2.568,21"),
+    at(359, 700, "19/10"), at(379, 700, "UBER"), at(507, 700, "11,99"),
+    at(379, 693, "transporte SAO PAULO"),
+    // linha 2: compra parcelada de fatura anterior (esquerda) e compra (direita)
+    at(143, 680, "22/10"), at(170, 680, "MERCADO X 02/03"), at(292, 680, "50,00"),
+    at(359, 680, "23/10"), at(379, 680, "LOJA Y"), at(507, 680, "100,00"),
+    // a partir daqui é projeção de faturas futuras: não entra
+    at(143, 660, "Compras parceladas - próximas faturas"),
+    at(143, 650, "16/08"), at(170, 650, "FUTURA 04/06"), at(292, 650, "99,00"),
+  ],
+};
+
+const itauText = [
+  "Vencimento: 20/11/2026",
+  "Total da fatura anterior | 2.568,21",
+  "Pagamento efetuado em 20/10/2026 | -2.568,21",
+  "Lançamentos atuais | 161,99",
+  "Total desta fatura | 161,99",
+  "Limite total de crédito:",
+  "R$ 11.208,00",
+  "Cartão | 4281.XXXX.XXXX.7502",
+].join("\n");
+
+const itauInvoice = parseItauInvoice([itauPage], itauText);
+check("itau: vencimento", itauInvoice.dueDate === "2026-11-20", String(itauInvoice.dueDate));
+check("itau: pagamento fora das compras", itauInvoice.rows.filter((r) => !r.isPayment).length === 3, `${itauInvoice.rows.length}`);
+check("itau: soma bate com 'lançamentos atuais'", itauInvoice.purchasesCents === 16199, String(itauInvoice.purchasesCents));
+check("itau: compras futuras não entram", !itauInvoice.rows.some((r) => r.description.includes("FUTURA")));
+check("itau: pagamento reconhecido", itauInvoice.paymentCents === 256821, String(itauInvoice.paymentCents));
+check("itau: limite na linha de baixo", itauInvoice.limitCents === 1120800, String(itauInvoice.limitCents));
+check("itau: final do cartão", itauInvoice.rows[0]?.cardEnding === "7502", String(itauInvoice.rows[0]?.cardEnding));
+check("itau: parcelamento 02/03", itauInvoice.rows.some((r) => r.installment?.number === 2 && r.installment?.total === 3));
+check("itau: colunas não se misturam", itauInvoice.rows.find((r) => r.description === "UBER")?.amountCents === 1199);
+check("itau: ano pela data de vencimento", resolveYearByDue(16, 8, "2026-11-20") === "2026-08-16");
+check("itau: dezembro em fatura de janeiro", resolveYearByDue(28, 12, "2027-01-20") === "2026-12-28");
+
+// ------------------------------------------------------- 10. arquivo real (CLI) --
 const file = process.argv[2];
 if (file) {
   const buffer = new Uint8Array(readFileSync(file));

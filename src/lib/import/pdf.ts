@@ -21,6 +21,10 @@ export type PdfText = {
 
 type TextItem = { str: string; transform: number[] };
 
+/** Item de texto com posição — necessário para layouts em duas colunas. */
+export type PositionedItem = { x: number; y: number; text: string };
+export type PositionedPage = { width: number; height: number; items: PositionedItem[] };
+
 let pdfjsPromise: Promise<typeof import("pdfjs-dist/legacy/build/pdf.mjs")> | null = null;
 
 async function loadPdfjs() {
@@ -70,7 +74,8 @@ export async function extractPdfText(data: Uint8Array, password?: string): Promi
   let doc;
   try {
     doc = await pdfjs.getDocument({
-      data,
+      // cópia: pdfjs desanexa (transfer) o buffer recebido
+      data: new Uint8Array(data),
       password,
       useSystemFonts: true,
     }).promise;
@@ -91,6 +96,37 @@ export async function extractPdfText(data: Uint8Array, password?: string): Promi
     pages,
     text: pages.map((lines) => lines.map((cells) => cells.join(" ")).join("\n")).join("\n"),
   };
+}
+
+/** Extrai itens com coordenadas (x, y) por página — base para tabelas em colunas. */
+export async function extractPdfItems(data: Uint8Array, password?: string): Promise<PositionedPage[]> {
+  const pdfjs = await loadPdfjs();
+
+  let doc;
+  try {
+    doc = await pdfjs.getDocument({ data: new Uint8Array(data), password, useSystemFonts: true }).promise;
+  } catch (error) {
+    const name = (error as { name?: string }).name ?? "";
+    if (name === "PasswordException") throw new PdfPasswordError();
+    throw error;
+  }
+
+  const pages: PositionedPage[] = [];
+  for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber += 1) {
+    const page = await doc.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 1 });
+    const content = await page.getTextContent();
+    const items: PositionedItem[] = [];
+
+    for (const raw of content.items as TextItem[]) {
+      if (!raw.str || !raw.str.trim()) continue;
+      items.push({ x: raw.transform[4], y: raw.transform[5], text: raw.str.trim() });
+    }
+
+    pages.push({ width: viewport.width, height: viewport.height, items });
+  }
+
+  return pages;
 }
 
 /** Junta as células de uma linha em texto único, preservando separação por " | ". */

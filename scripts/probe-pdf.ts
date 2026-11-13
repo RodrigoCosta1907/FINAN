@@ -4,8 +4,9 @@
  *   PDF_PASSWORD=... (opcional) para PDF protegido
  */
 import { readFileSync } from "node:fs";
-import { extractPdfText, pagesToLines, PdfPasswordError } from "../src/lib/import/pdf.ts";
+import { extractPdfItems, extractPdfText, pagesToLines, PdfPasswordError } from "../src/lib/import/pdf.ts";
 import { parseNubankInvoice } from "../src/lib/import/nubank.ts";
+import { parseItauInvoice } from "../src/lib/import/itau.ts";
 
 const file = process.argv[2];
 if (!file) {
@@ -20,17 +21,23 @@ try {
   const { pages, text } = await extractPdfText(data, process.env.PDF_PASSWORD);
   console.log(`${file}\n  páginas: ${pages.length} · ${text.length} caracteres`);
 
-  if (!/nubank|nu pagamentos/i.test(text)) {
-    console.log("  layout não reconhecido (por enquanto só Nubank)");
+  let invoice;
+  if (/nubank|nu pagamentos/i.test(text)) {
+    invoice = parseNubankInvoice(pagesToLines(pages));
+  } else if (/ita[uú]/i.test(text) || /itau\.com\.br/i.test(text)) {
+    invoice = parseItauInvoice(await extractPdfItems(data, process.env.PDF_PASSWORD), text);
+  } else {
+    console.log("  layout não reconhecido");
     process.exit(0);
   }
 
-  const invoice = parseNubankInvoice(pagesToLines(pages));
-  console.log(`  vencimento: ${invoice.dueDate} · período: ${invoice.periodStart} a ${invoice.periodEnd}`);
-  console.log(`  total da fatura: ${invoice.totalCents !== null ? brl(invoice.totalCents) : "—"} · compras: ${brl(invoice.purchasesCents)}`);
-  console.log(`  pagamento recebido: ${invoice.paymentCents !== null ? brl(invoice.paymentCents) : "—"} · limite: ${invoice.limitCents !== null ? brl(invoice.limitCents) : "—"}`);
-  console.log(`  ${invoice.rows.length} compra(s):`);
-  for (const row of invoice.rows) {
+  console.log(`  emissor: ${invoice.issuer} · vencimento: ${invoice.dueDate ?? "—"}`);
+  if (invoice.periodStart) console.log(`  período: ${invoice.periodStart} a ${invoice.periodEnd}`);
+  console.log(`  total desta fatura: ${invoice.totalCents !== null ? brl(invoice.totalCents) : "—"} · compras: ${brl(invoice.purchasesCents)}`);
+  console.log(`  anterior: ${invoice.previousBalanceCents !== null ? brl(invoice.previousBalanceCents) : "—"} · pagamento: ${invoice.paymentCents !== null ? brl(invoice.paymentCents) : "—"} · limite: ${invoice.limitCents !== null ? brl(invoice.limitCents) : "—"}`);
+  const compras = invoice.rows.filter((row) => !row.isPayment);
+  console.log(`  ${compras.length} compra(s):`);
+  for (const row of compras) {
     const parcela = row.installment ? ` [${row.installment.number}/${row.installment.total}]` : "";
     console.log(`   ${row.date}  ${(row.cardEnding ?? "----").padStart(4)}  ${brl(row.amountCents).padStart(9)}  ${row.description}${parcela}`);
   }
