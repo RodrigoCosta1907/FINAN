@@ -3,6 +3,7 @@
 import { Suspense, useState, type ReactNode } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { MobileNav } from "@/components/layout/mobile-nav";
 
 export function AppShell({
   children,
@@ -29,10 +30,11 @@ export function AppShell({
         >
           <Topbar onOpenMenu={() => setMenuOpen(true)} userName={userName} />
         </Suspense>
-        <main className="mx-auto w-full max-w-[1440px] px-4 py-5 sm:px-6 sm:py-6">
+        <main className="mx-auto w-full max-w-[1440px] px-4 pt-4 pb-24 sm:px-6 sm:pt-6 lg:pb-6">
           {children}
         </main>
       </div>
+      <MobileNav onOpenMenu={() => setMenuOpen(true)} />
     </div>
   );
 }
