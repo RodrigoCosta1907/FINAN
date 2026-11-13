@@ -21,9 +21,17 @@ begin
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname like 'fin\_%';
-  if v_count <> 15 then
-    raise exception 'esperava 15 funções fin_*, encontrei %', v_count;
+  if v_count <> 17 then
+    raise exception 'esperava 17 funções fin_*, encontrei %', v_count;
   end if;
+
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname in ('fin_receive_receivable', 'fin_close_invoice')
+  ) then
+    raise exception 'faltam as funções de baixa da fase 3';
+  end if;
+
   insert into t_results values ('wrappers public.fin_*', v_count::text);
 
   select count(*) into v_before from public.households;
