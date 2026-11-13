@@ -42,7 +42,8 @@ export function decodeBuffer(input: Uint8Array): { text: string; encoding: Parse
 // -------------------------------------------------------------------- valores --
 export function parseAmountToCents(raw: string): number | null {
   if (raw == null) return null;
-  let text = String(raw).trim();
+  // normaliza menos tipográfico (− U+2212, en/em dash) que os PDFs usam
+  let text = String(raw).replace(/[\u2212\u2013\u2014]/g, "-").trim();
   if (!text) return null;
 
   let sign = 1;

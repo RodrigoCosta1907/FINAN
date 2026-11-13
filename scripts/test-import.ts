@@ -12,6 +12,7 @@ import {
   withFingerprints,
   type RawRow,
 } from "../src/lib/import/core.ts";
+import { parseNubankInvoice } from "../src/lib/import/nubank.ts";
 
 let failures = 0;
 function check(label: string, condition: boolean, detail = "") {
@@ -120,6 +121,42 @@ check("conta diferente muda a chave", first[0].fingerprint !== withFingerprints(
 
 const ofxFp = withFingerprints("acc-1", ofxParsed.rows);
 check("OFX usa FITID como chave", ofxFp[0].fingerprint === withFingerprints("acc-1", ofxParsed.rows)[0].fingerprint);
+
+// ------------------------------------------- 8. fatura de cartão em PDF (texto) --
+// Layout do PDF do Nubank já reconstruído em linhas (células unidas por " | ").
+const fatura = [
+  "Olá, alguém. Esta é a sua fatura de",
+  "novembro, no valor de R$ 1.355,37",
+  "Data de vencimento: 16 NOV 2026 | Período vigente: 09 OUT a 09 NOV",
+  "Limite total do cartão de crédito: R$ 10.700,00",
+  "Utilizado Disponível Limite total R$ 9.003,41 R$ 10.700,00",
+  "TRANSAÇÕESDE 09 OUT A 09 NOV",
+  "09 OUT | •••• 8481 | Loja A - Parcela 8/11 | R$ 15,28",
+  "09 OUT | •••• 5871 | Loja B - Parcela 2/10 | R$ 790,68",
+  "22 OUT | •••• 4809 | Energia | R$ 175,72",
+  "02 NOV | •••• 4809 | Assinatura | R$ 4,50",
+  "15 OUT | Pagamento em 15 OUT | \u2212R$ 1.331,55",
+];
+
+const inv = parseNubankInvoice(fatura);
+check("fatura: vencimento", inv.dueDate === "2026-11-16", String(inv.dueDate));
+check("fatura: período", inv.periodStart === "2026-10-09" && inv.periodEnd === "2026-11-09");
+check("fatura: total", inv.totalCents === 135537, String(inv.totalCents));
+check("fatura: limite não pega o utilizado", inv.limitCents === 1070000, String(inv.limitCents));
+check("fatura: 4 compras (pagamento fora da lista)", inv.rows.length === 4, `${inv.rows.length}`);
+check("fatura: soma das compras", inv.purchasesCents === 98618, String(inv.purchasesCents));
+check("fatura: pagamento capturado", inv.paymentCents === 133155, String(inv.paymentCents));
+check("fatura: parcela 8/11 lida", inv.rows[0].installment?.number === 8 && inv.rows[0].installment?.total === 11);
+check("fatura: descrição sem o sufixo da parcela", inv.rows[0].description === "Loja A", inv.rows[0].description);
+check("fatura: data sem ano resolvida pelo período", inv.rows[2].date === "2026-10-22", inv.rows[2].date);
+
+const virada = parseNubankInvoice([
+  "Data de vencimento: 16 JAN 2027 | Período vigente: 09 DEZ a 09 JAN",
+  "no valor de R$ 100,00",
+  "TRANSAÇÕESDE 09 DEZ A 09 JAN",
+  "15 DEZ | •••• 1111 | Loja C | R$ 100,00",
+]);
+check("fatura: período vira o ano (DEZ em fatura de JAN)", virada.rows[0].date === "2026-12-15", virada.rows[0].date);
 
 // ------------------------------------------------------- 8. arquivo real (CLI) --
 const file = process.argv[2];
