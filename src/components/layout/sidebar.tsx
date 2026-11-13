@@ -2,18 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sparkles, Settings, X } from "lucide-react";
+import { LogOut, Sparkles, Settings, X } from "lucide-react";
 import { modules } from "@/lib/modules";
 import { cn } from "@/lib/utils";
+import { signOut } from "@/app/(auth)/actions";
 
 export function Sidebar({
   open,
   onClose,
+  userName,
+  householdName,
 }: {
   open: boolean;
   onClose: () => void;
+  userName: string;
+  householdName: string;
 }) {
   const pathname = usePathname();
+  const initials =
+    userName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "EU";
 
   return (
     <>
@@ -53,11 +65,11 @@ export function Sidebar({
 
         <div className="mx-3 mb-3 flex items-center gap-2 rounded-[10px] border border-border bg-subtle px-3 py-2">
           <div className="grid h-7 w-7 place-items-center rounded-lg bg-violet-soft text-[11px] font-semibold text-violet">
-            CS
+            {householdName.slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[12.5px] font-medium">Casa</p>
-            <p className="truncate text-[10.5px] text-muted-foreground">Espaço compartilhado</p>
+            <p className="truncate text-[12.5px] font-medium">{householdName}</p>
+            <p className="truncate text-[10.5px] text-muted-foreground">Espaço financeiro</p>
           </div>
           <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
             2
@@ -98,12 +110,22 @@ export function Sidebar({
         <div className="border-t border-border p-3">
           <div className="mb-2 flex items-center gap-2 rounded-[10px] px-2 py-1.5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-violet-soft text-[11px] font-semibold text-violet">
-              RC
+              {initials}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12.5px] font-medium">Rodrigo</p>
-              <p className="truncate text-[10.5px] text-muted-foreground">Espaço pessoal</p>
+              <p className="truncate text-[12.5px] font-medium">{userName}</p>
+              <p className="truncate text-[10.5px] text-muted-foreground">{householdName}</p>
             </div>
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Sair"
+                title="Sair"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </button>
+            </form>
             <Link
               href="/configuracoes"
               onClick={onClose}

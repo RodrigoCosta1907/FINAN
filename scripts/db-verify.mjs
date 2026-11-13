@@ -87,6 +87,22 @@ const applied = await q(`select name from public.schema_migrations order by name
 console.log("\nMIGRATIONS APLICADAS");
 for (const row of applied) console.log(`✔ ${row.name}`);
 
+// ---- dados existentes (prova de uso real, não só schema) ----
+const dataChecks = [
+  ["usuários (auth.users)", "select count(*)::int as n from auth.users"],
+  ["households", "select count(*)::int as n from public.households"],
+  ["pessoas", "select count(*)::int as n from public.people"],
+  ["categorias", "select count(*)::int as n from public.categories"],
+  ["contas financeiras", "select count(*)::int as n from public.financial_accounts"],
+  ["lançamentos", "select count(*)::int as n from public.account_transactions"],
+  ["contas a pagar", "select count(*)::int as n from public.bills"],
+];
+console.log("\nDADOS");
+for (const [label, sql] of dataChecks) {
+  const rows = await q(sql);
+  console.log(`• ${label}: ${rows[0].n}`);
+}
+
 await client.end();
 
 // ---- API pública (PostgREST), como o app fará ----

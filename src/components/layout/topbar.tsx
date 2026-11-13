@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Bell,
@@ -13,7 +13,6 @@ import {
   Sun,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useMonth } from "@/components/layout/month-context";
 import { cn } from "@/lib/utils";
 
 function greetingFor(hour: number) {
@@ -21,6 +20,11 @@ function greetingFor(hour: number) {
   if (hour < 18) return "Boa tarde";
   return "Boa noite";
 }
+
+const MONTH_LABELS = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
 
 function useTheme() {
   const dark = useSyncExternalStore(subscribeTheme, readTheme, () => false);
@@ -65,11 +69,32 @@ function useGreeting() {
   );
 }
 
-export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
+export function Topbar({ onOpenMenu, userName }: { onOpenMenu: () => void; userName: string }) {
   const router = useRouter();
-  const { monthNames, monthIndex, setMonthIndex, year, setYear } = useMonth();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { dark, toggle } = useTheme();
   const greeting = useGreeting();
+
+  const now = new Date();
+  const monthIndex = (Number(searchParams.get("mes")) || now.getMonth() + 1) - 1;
+  const year = Number(searchParams.get("ano")) || now.getFullYear();
+
+  function setPeriod(nextMonth: number, nextYear: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("mes", String(nextMonth + 1));
+    params.set("ano", String(nextYear));
+    router.push(`${pathname}?${params.toString()}`);
+  }
+
+  const firstName = userName.split(/\s+/)[0] ?? userName;
+  const initials =
+    userName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "EU";
   const [query, setQuery] = useState("");
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -109,7 +134,9 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
         </button>
 
         <div className="hidden min-w-0 md:block">
-          <p className="truncate text-[13px] text-muted-foreground">{greeting}, Rodrigo</p>
+          <p className="truncate text-[13px] text-muted-foreground">
+            {greeting}, {firstName}
+          </p>
           <p className="truncate text-[15px] font-semibold tracking-tight">
             Sua saúde financeira está{" "}
             <span className="text-success">estável</span>
@@ -143,10 +170,10 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
             <select
               aria-label="Mês"
               value={monthIndex}
-              onChange={(event) => setMonthIndex(Number(event.target.value))}
+              onChange={(event) => setPeriod(Number(event.target.value), year)}
               className="h-8 appearance-none rounded-md bg-transparent pr-1 pl-1.5 text-[12.5px] font-medium outline-none"
             >
-              {monthNames.map((name, index) => (
+              {MONTH_LABELS.map((name, index) => (
                 <option key={name} value={index}>
                   {name}
                 </option>
@@ -156,7 +183,7 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
             <select
               aria-label="Ano"
               value={year}
-              onChange={(event) => setYear(Number(event.target.value))}
+              onChange={(event) => setPeriod(monthIndex, Number(event.target.value))}
               className="h-8 appearance-none rounded-md bg-transparent px-1.5 text-[12.5px] font-medium outline-none"
             >
               {[2025, 2026, 2027].map((y) => (
@@ -231,9 +258,9 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
               "grid h-9 w-9 shrink-0 place-items-center rounded-full bg-violet-soft text-[12px] font-semibold text-violet",
               "ring-1 ring-border",
             )}
-            aria-label="Perfil de Rodrigo"
+            aria-label={`Perfil de ${firstName}`}
           >
-            RC
+            {initials}
           </button>
         </div>
       </div>

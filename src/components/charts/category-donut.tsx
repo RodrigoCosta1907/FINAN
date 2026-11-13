@@ -1,11 +1,18 @@
 "use client";
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { categories } from "@/lib/demo-data";
 import { formatBRL } from "@/lib/money";
 import { Progress } from "@/components/ui/progress";
 
-type TooltipItem = { name?: string; value?: number | string; payload?: { color?: string } };
+export type DonutSlice = {
+  id: string;
+  name: string;
+  color: string;
+  spent: number;
+  budget: number;
+};
+
+type TooltipItem = { name?: string; value?: number | string };
 
 function DonutTooltip({ active, payload }: { active?: boolean; payload?: TooltipItem[] }) {
   if (!active || !payload?.length) return null;
@@ -19,14 +26,24 @@ function DonutTooltip({ active, payload }: { active?: boolean; payload?: Tooltip
   );
 }
 
-export function CategoryDonut({ total }: { total: number }) {
+export function CategoryDonut({ slices, total }: { slices: DonutSlice[]; total: number }) {
+  if (!slices.length) {
+    return (
+      <div className="grid h-[220px] place-items-center rounded-[10px] border border-dashed border-border text-center">
+        <p className="max-w-[220px] text-[12px] text-muted-foreground">
+          Nenhuma despesa neste mês ainda. A distribuição aparece no primeiro lançamento.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="relative h-[176px] w-[176px] shrink-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={categories}
+              data={slices}
               dataKey="spent"
               nameKey="name"
               innerRadius={58}
@@ -36,7 +53,7 @@ export function CategoryDonut({ total }: { total: number }) {
               startAngle={90}
               endAngle={-270}
             >
-              {categories.map((slice) => (
+              {slices.map((slice) => (
                 <Cell key={slice.id} fill={slice.color} />
               ))}
             </Pie>
@@ -50,7 +67,7 @@ export function CategoryDonut({ total }: { total: number }) {
       </div>
 
       <ul className="w-full space-y-1.5">
-        {categories.map((slice) => {
+        {slices.map((slice) => {
           const pct = total > 0 ? (slice.spent / total) * 100 : 0;
           const used = slice.budget > 0 ? (slice.spent / slice.budget) * 100 : 0;
           return (
@@ -64,11 +81,13 @@ export function CategoryDonut({ total }: { total: number }) {
                   {pct.toFixed(0)}% · {formatBRL(slice.spent)}
                 </span>
               </div>
-              <Progress
-                value={used}
-                tone={used > 100 ? "danger" : used > 90 ? "warning" : "primary"}
-                className="mt-0.5 h-1"
-              />
+              {slice.budget > 0 && (
+                <Progress
+                  value={used}
+                  tone={used > 100 ? "danger" : used > 90 ? "warning" : "primary"}
+                  className="mt-0.5 h-1"
+                />
+              )}
             </li>
           );
         })}

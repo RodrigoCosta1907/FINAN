@@ -1,36 +1,39 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { differenceInCalendarDays, parseISO } from "date-fns";
 import { Check, Clock, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { demoToday, type UpcomingBill } from "@/lib/demo-data";
 import { formatBRL } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import type { BillRow } from "@/server/queries/dashboard";
 
 const monthShort = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
-export function UpcomingBills({ bills }: { bills: UpcomingBill[] }) {
-  const [settled, setSettled] = useState<Set<string>>(new Set());
-
-  const rows = useMemo(
-    () =>
-      bills
-        .map((bill) => {
-          const diff = differenceInCalendarDays(parseISO(bill.dueDate), parseISO(demoToday));
-          return { ...bill, diff };
-        })
-        .sort((a, b) => a.diff - b.diff),
-    [bills],
-  );
+/**
+ * Lista de vencimentos. O botão "Pagar" executa a ação real (server action
+ * passada pelo pai); o estado local só evita duplo clique.
+ */
+export function UpcomingBills({
+  bills,
+  today,
+  onPay,
+}: {
+  bills: BillRow[];
+  today: string;
+  onPay?: (id: string) => Promise<void>;
+}) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [paid, setPaid] = useState<Set<string>>(new Set());
 
   return (
     <div className="divide-y divide-border">
-      {rows.map((bill) => {
-        const isPaid = settled.has(bill.id);
-        const late = !isPaid && bill.diff < 0;
-        const soon = !isPaid && bill.diff >= 0 && bill.diff <= 3;
+      {bills.map((bill) => {
+        const diff = differenceInCalendarDays(parseISO(bill.dueDate), parseISO(today));
+        const isPaid = paid.has(bill.id);
+        const late = !isPaid && diff < 0;
+        const soon = !isPaid && diff >= 0 && diff <= 3;
         const date = parseISO(bill.dueDate);
 
         return (
@@ -43,7 +46,9 @@ export function UpcomingBills({ bills }: { bills: UpcomingBill[] }) {
                   : "border-border bg-subtle text-muted-foreground",
               )}
             >
-              <span className="text-[13px] leading-none font-semibold tabular-nums">{date.getDate()}</span>
+              <span className="text-[13px] leading-none font-semibold tabular-nums">
+                {date.getDate()}
+              </span>
               <span className="text-[9.5px] leading-none uppercase">{monthShort[date.getMonth()]}</span>
             </div>
 
@@ -59,18 +64,22 @@ export function UpcomingBills({ bills }: { bills: UpcomingBill[] }) {
                 )}
                 {soon && (
                   <Badge tone="warning" className="shrink-0">
-                    <Clock className="h-2.5 w-2.5" /> {bill.diff === 0 ? "hoje" : `${bill.diff}d`}
+                    <Clock className="h-2.5 w-2.5" /> {diff === 0 ? "hoje" : `${diff}d`}
                   </Badge>
                 )}
-                {bill.status === "closed" && !isPaid && (
+                {bill.status === "partially_paid" && (
                   <Badge tone="primary" className="shrink-0">
-                    fatura fechada
+                    parcial
                   </Badge>
                 )}
               </div>
               <p className="truncate text-[11.5px] text-muted-foreground">
                 {bill.category}
-                {isPaid ? " · pago" : late ? ` · ${Math.abs(bill.diff)} dia(s) em atraso` : ` · em ${bill.diff} dia(s)`}
+                {isPaid
+                  ? " · pago"
+                  : late
+                    ? ` · ${Math.abs(diff)} dia(s) em atraso`
+                    : ` · em ${diff} dia(s)`}
               </p>
             </div>
 
@@ -81,16 +90,20 @@ export function UpcomingBills({ bills }: { bills: UpcomingBill[] }) {
             <Button
               size="sm"
               variant={isPaid ? "secondary" : "outline"}
-              onClick={() =>
-                setSettled((current) => {
-                  const next = new Set(current);
-                  if (next.has(bill.id)) next.delete(bill.id);
-                  else next.add(bill.id);
-                  return next;
-                })
-              }
+              disabled={!onPay || isPaid || busy === bill.id}
+              onClick={async () => {
+                if (!onPay) return;
+                setBusy(bill.id);
+                try {
+                  await onPay(bill.id);
+                  setPaid((current) => new Set(current).add(bill.id));
+                } finally {
+                  setBusy(null);
+                }
+              }}
               className="shrink-0"
               aria-pressed={isPaid}
+              title={onPay ? "Registrar pagamento" : "Disponível na fase 3"}
             >
               <Check className={cn("h-3.5 w-3.5", isPaid && "text-success")} />
               <span className="hidden sm:inline">{isPaid ? "Pago" : "Pagar"}</span>
