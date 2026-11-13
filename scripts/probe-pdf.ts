@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { extractPdfItems, extractPdfText, pagesToLines, PdfPasswordError } from "../src/lib/import/pdf.ts";
 import { parseNubankInvoice } from "../src/lib/import/nubank.ts";
 import { parseItauInvoice } from "../src/lib/import/itau.ts";
+import { prepareInvoiceImport } from "../src/lib/import/prepare.ts";
 
 const file = process.argv[2];
 if (!file) {
@@ -42,6 +43,17 @@ try {
     console.log(`   ${row.date}  ${(row.cardEnding ?? "----").padStart(4)}  ${brl(row.amountCents).padStart(9)}  ${row.description}${parcela}`);
   }
   for (const warning of invoice.warnings) console.log(`  ! ${warning}`);
+
+  const prepared = prepareInvoiceImport(invoice);
+  console.log(`\n  VAI GRAVAR: ${prepared.rows.length} linha(s) · ${brl(prepared.totalCents)}`);
+  console.log(
+    `  total da fatura: ${prepared.invoiceTotalCents !== null ? brl(prepared.invoiceTotalCents) : "—"} · ` +
+      `diferença: ${prepared.differenceCents !== null ? brl(prepared.differenceCents) : "—"}`,
+  );
+  console.log(
+    `  fora: pagamento ${brl(prepared.paymentsSkippedCents)} · créditos ${brl(prepared.creditsSkippedCents)}`,
+  );
+  for (const warning of prepared.warnings) console.log(`  > ${warning}`);
 } catch (error) {
   if (error instanceof PdfPasswordError) {
     console.log("  PDF PROTEGIDO POR SENHA — precisa de uma cópia sem proteção");

@@ -21,8 +21,8 @@ begin
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname like 'fin\_%';
-  if v_count <> 17 then
-    raise exception 'esperava 17 funções fin_*, encontrei %', v_count;
+  if v_count <> 18 then
+    raise exception 'esperava 18 funções fin_*, encontrei %', v_count;
   end if;
 
   if not exists (

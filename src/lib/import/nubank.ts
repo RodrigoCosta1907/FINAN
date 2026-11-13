@@ -16,6 +16,8 @@ export type InvoiceRow = {
   amountCents: number;
   isPayment: boolean;
   installment: { number: number; total: number } | null;
+  /** no Itaú a fatura separa "compras e saques" de "produtos e serviços" */
+  section?: "purchases" | "services";
 };
 
 export type CardInvoice = {

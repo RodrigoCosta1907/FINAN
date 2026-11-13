@@ -52,12 +52,23 @@ const MONEY_TAIL = /(-?[\d.]+,\d{2})\s*$/;
  */
 function parseColumn(lines: ColumnLine[], dueDate: string | null, stopAt?: RegExp): InvoiceRow[] {
   const rows: InvoiceRow[] = [];
+  let section: "purchases" | "services" = "purchases";
 
   for (const line of lines) {
     const text = line.cells.map((cell) => cell.text).join(" ").replace(/\s+/g, " ").trim();
 
     // "Compras parceladas - próximas faturas" é projeção, não despesa desta fatura
     if (stopAt?.test(text)) break;
+
+    // a fatura separa compras de produtos/serviços (anuidade, mensalidade)
+    if (/lan[çc]amentos:\s*produtos/i.test(text)) {
+      section = "services";
+      continue;
+    }
+    if (/lan[çc]amentos:\s*compras/i.test(text)) {
+      section = "purchases";
+      continue;
+    }
 
     const dateMatch = DATE_LINE.exec(text);
 
@@ -97,6 +108,7 @@ function parseColumn(lines: ColumnLine[], dueDate: string | null, stopAt?: RegEx
       installment: installment
         ? { number: Number(installment[1]), total: Number(installment[2]) }
         : null,
+      section,
     });
   }
 
