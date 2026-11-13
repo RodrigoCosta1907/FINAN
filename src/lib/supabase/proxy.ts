@@ -2,7 +2,17 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/env";
 
-const PUBLIC_PATHS = ["/entrar", "/criar-conta", "/auth", "/recuperar-senha", "/redefinir-senha"];
+const PUBLIC_PATHS = [
+  "/entrar",
+  "/criar-conta",
+  "/auth",
+  "/recuperar-senha",
+  "/redefinir-senha",
+  // o navegador busca estes sem sessão: se redirecionar, o app deixa de instalar
+  "/manifest.webmanifest",
+  "/sw.js",
+  "/icons",
+];
 
 /**
  * Mantém a sessão do Supabase (refresh de token) e aplica o guard otimista de
