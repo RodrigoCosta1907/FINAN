@@ -38,6 +38,28 @@ export function parseBRLToCents(input: string): number | null {
   return Math.round(value * 100);
 }
 
+/**
+ * Aceita o que o usuário digitar em um campo de dinheiro:
+ * "25" → 2500 · "25,90" → 2590 · "1.234,56" → 123456 · "1234.56" → 123456
+ */
+export function parseMoneyInput(input: string): number | null {
+  const raw = input.trim().replace(/[^\d.,-]/g, "");
+  if (!raw) return null;
+
+  let normalized: string;
+  if (raw.includes(",")) {
+    normalized = raw.replace(/\./g, "").replace(",", ".");
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(raw)) {
+    normalized = raw.replace(/\./g, "");
+  } else {
+    normalized = raw;
+  }
+
+  const value = Number(normalized);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return Math.round(value * 100);
+}
+
 /** Divide um valor em centavos sem perder 1 centavo no somatório. */
 export function splitCents(total: number, parts: number): number[] {
   if (!Number.isInteger(total) || total < 0 || parts < 1) {
