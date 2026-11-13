@@ -15,6 +15,7 @@
     "test:db": "node scripts/db-check.mjs",
     "test:parse": "node --experimental-strip-types scripts/test-parse.ts",
     "test:import": "node --experimental-strip-types scripts/test-import.ts",
+    "test:payment": "node --experimental-strip-types scripts/test-payment.ts",
     "db:push": "node scripts/db-push.mjs",
     "db:verify": "node scripts/db-verify.mjs"
   },
