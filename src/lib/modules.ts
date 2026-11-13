@@ -4,6 +4,7 @@ import {
   BarChart3,
   CalendarRange,
   CreditCard,
+  FileUp,
   Landmark,
   Layers,
   LayoutDashboard,
@@ -47,6 +48,15 @@ export const modules: ModuleDef[] = [
     phase: 2,
     summary: "Todos os lançamentos com filtros combináveis, edição em lote e importação.",
     bullets: ["Filtros por período, conta, categoria, pessoa e status", "Ações em lote", "Exportar CSV/XLSX/PDF"],
+  },
+  {
+    slug: "importar",
+    label: "Importar",
+    href: "/importar",
+    icon: FileUp,
+    phase: 3,
+    summary: "Importação de fatura de cartão em PDF (Nubank, Itaú/VISA), com prévia e proteção contra duplicidade.",
+    bullets: ["Prévia linha a linha", "Reimportar não duplica", "Um cartão por final"],
   },
   {
     slug: "receitas",
