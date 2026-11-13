@@ -60,6 +60,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR" suppressHydrationWarning className={`${inter.variable} h-full`}>
       <head>
+        {/* iOS antigo só abre em tela cheia com esta tag (a nova é mobile-web-app-capable) */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-full font-sans antialiased">
