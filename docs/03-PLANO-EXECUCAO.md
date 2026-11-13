@@ -21,7 +21,8 @@ verificação em navegador real. Nada é "concluído" por aparência.
 | Schema 36 tabelas + índices + constraints | feito | `db-check` aplica as 3 migrations |
 | RLS por household | feito | teste com 2 usuários: 0 vs 1 household |
 | Funções financeiras (fatura, rateio, acerto, dashboard) | feito | 15 asserções do `01_smoke.sql` |
-| Dashboard ligado ao Supabase | pendente | precisa do projeto Supabase |
+| Banco provisionado no Supabase | feito | `npm run db:verify`: 36 tabelas, 36 com RLS, 72 políticas, 42 triggers |
+| Dashboard ligado ao Supabase | pendente | precisa de auth + household criado na UI |
 
 **Critério de saída:** `npm run build`, `npm run db:check` e `npm test` verdes, e
 dashboard lendo dados reais de um household criado via UI.

@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run lint",
     "test:db": "node scripts/db-check.mjs",
-    "db:push": "node scripts/db-push.mjs"
+    "db:push": "node scripts/db-push.mjs",
+    "db:verify": "node scripts/db-verify.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.6",

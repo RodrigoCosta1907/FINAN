@@ -25,17 +25,27 @@ async function loadEnv() {
     const match = /^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/.exec(line);
     if (!match) continue;
     const [, key, value] = match;
-    if (!process.env[key!]) process.env[key!] = value!.replace(/^["']|["']$/g, "");
+    if (!process.env[key]) process.env[key] = value.replace(/^["']|["']$/g, "");
   }
 }
 
 await loadEnv();
 
-const url = process.env.SUPABASE_DB_URL;
+function buildUrlFromParts() {
+  const password = process.env.SUPABASE_DB_PASSWORD;
+  const host = process.env.SUPABASE_POOLER_HOST;
+  const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  if (!password || !host) return "";
+  const ref = new URL(projectUrl).hostname.split(".")[0];
+  return `postgresql://postgres.${ref}:${encodeURIComponent(password)}@${host}:5432/postgres`;
+}
+
+const explicitUrl = process.env.SUPABASE_DB_URL ?? "";
+const url = /^postgres(ql)?:\/\//.test(explicitUrl) ? explicitUrl : buildUrlFromParts();
 if (!url) {
   throw new Error(
-    "SUPABASE_DB_URL ausente no .env.local. Use a connection string do projeto " +
-      "(Dashboard → Project Settings → Database → Connection string → Session pooler).",
+    "Sem credencial de banco no .env.local: preencha SUPABASE_DB_PASSWORD " +
+      "(Dashboard → Database → Reset database password) ou SUPABASE_DB_URL.",
   );
 }
 
