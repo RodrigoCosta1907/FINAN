@@ -37,6 +37,13 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname, search } = request.nextUrl;
+
+  // Webhooks e rotas de API cuidam da própria autenticação (ex.: token do
+  // Telegram, segredo do cron). Não passam pelo guard de página.
+  if (pathname.startsWith("/api")) {
+    return response;
+  }
+
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (!user && !isPublic) {
