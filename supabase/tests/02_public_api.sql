@@ -21,8 +21,8 @@ begin
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname like 'fin\_%';
-  if v_count <> 14 then
-    raise exception 'esperava 14 funções fin_*, encontrei %', v_count;
+  if v_count <> 15 then
+    raise exception 'esperava 15 funções fin_*, encontrei %', v_count;
   end if;
   insert into t_results values ('wrappers public.fin_*', v_count::text);
 
