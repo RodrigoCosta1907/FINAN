@@ -4,9 +4,6 @@ import { parseNubankInvoice } from "@/lib/import/nubank";
 import { pagesToLines } from "@/lib/import/pdf";
 import { prepareInvoiceImport } from "@/lib/import/prepare";
 
-export const runtime = "nodejs";
-export const maxDuration = 60;
-
 /**
  * Autoteste do leitor de PDF em produção (serverless).
  * Só responde com o segredo do webhook do Telegram e devolve apenas números —
