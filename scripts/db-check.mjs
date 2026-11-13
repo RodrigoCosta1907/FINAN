@@ -87,13 +87,37 @@ async function main() {
     }
   } finally {
     await client.end().catch(() => {});
-    await pg.stop().catch(() => {});
+    await withTimeout(pg.stop(), 20_000).catch(() => {});
+    await killLeftoverPostgres();
   }
 
   if (process.exitCode) {
     console.error('\nFALHOU');
   } else {
     console.log('\nTUDO OK');
+  }
+  // O processo filho do Postgres pode manter o event loop vivo: encerra na marra.
+  process.exit(process.exitCode ?? 0);
+}
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+  ]);
+}
+
+// Se o pg_ctl não parou o cluster, mata pelo PID do postmaster.pid.
+async function killLeftoverPostgres() {
+  try {
+    const raw = await readFile(path.join(DB_DIR, 'postmaster.pid'), 'utf8');
+    const pid = Number(raw.split(/\r?\n/)[0]);
+    if (Number.isFinite(pid) && pid > 0) {
+      process.kill(pid, 'SIGKILL');
+      await new Promise((r) => setTimeout(r, 400));
+    }
+  } catch {
+    /* sem pid file: nada a fazer */
   }
 }
 

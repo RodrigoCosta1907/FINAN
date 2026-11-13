@@ -1354,10 +1354,23 @@ end;
 $$;
 
 -- Perfil criado automaticamente no cadastro (trigger em auth.users).
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function app.handle_new_user();
+-- Em Supabase o dono de auth.users é supabase_auth_admin: se a criação do
+-- trigger for recusada, o schema continua válido e o perfil é criado pela
+-- aplicação no primeiro login.
+do $$
+begin
+  begin
+    drop trigger if exists on_auth_user_created on auth.users;
+    create trigger on_auth_user_created
+      after insert on auth.users
+      for each row execute function app.handle_new_user();
+  exception
+    when insufficient_privilege then
+      raise notice 'sem permissão para trigger em auth.users (criar via painel se necessário)';
+    when undefined_table then
+      raise notice 'auth.users não existe neste banco (ambiente local)';
+  end;
+end $$;
 
 -- ================================================================ GRANTS ====
 grant execute on function

@@ -27,6 +27,7 @@ npm run dev          # http://localhost:3000
 npm run build        # build de produção
 npm run check        # typecheck + eslint
 npm run test:db      # aplica as migrations num Postgres real e roda os testes SQL
+npm run db:push      # aplica as migrations no banco do Supabase (lê SUPABASE_DB_URL)
 ```
 
 `npm run test:db` usa `embedded-postgres` (PostgreSQL 18 local, descartável,
