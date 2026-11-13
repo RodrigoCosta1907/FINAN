@@ -32,8 +32,10 @@ export default async function VisaoGeralPage({
   const month = clamp(Number(mes) || todayMonth || 1, 1, 12);
   const year = clamp(Number(ano) || todayYear || 2026, 2000, 2100);
 
+  // O layout já garante o espaço; a função é idempotente (trava no banco),
+  // então esta chamada nunca cria um segundo household.
   const user = await requireUser();
-  const householdId = await ensureHousehold(user);
+  const householdId = user.householdId ?? (await ensureHousehold(user));
   const data = await getDashboardData(householdId, year, month);
 
   return (

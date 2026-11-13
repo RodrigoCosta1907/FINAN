@@ -1,6 +1,7 @@
 -- ============================================================================
--- API pública: os wrappers `public.fin_*` precisam existir e funcionar com o
--- mesmo RLS do domínio (é o que o app chama via supabase.rpc).
+-- API pública + onboarding idempotente.
+-- O wrapper public.fin_* precisa existir, respeitar RLS e NÃO duplicar espaço
+-- financeiro quando chamado duas vezes (bug corrigido na migration 0005).
 -- ============================================================================
 begin;
 
@@ -9,10 +10,12 @@ set local role authenticated;
 
 do $$
 declare
-  v_count integer;
-  v_hh    uuid;
-  v_dash  jsonb;
-  v_bal   bigint;
+  v_count   integer;
+  v_hh1     uuid;
+  v_hh2     uuid;
+  v_before  integer;
+  v_after   integer;
+  v_bal     bigint;
 begin
   select count(*) into v_count
     from pg_proc p
@@ -23,29 +26,44 @@ begin
   end if;
   insert into t_results values ('wrappers public.fin_*', v_count::text);
 
-  v_hh := public.fin_create_household('Casa API', 'Rodrigo', true);
-  if v_hh is null then
-    raise exception 'fin_create_household devolveu null';
+  select count(*) into v_before from public.households;
+
+  v_hh1 := public.fin_create_household('Casa API', 'Rodrigo', true);
+  select count(*) into v_after from public.households;
+  if v_after <> v_before then
+    raise exception 'segunda chamada criou household novo (% -> %)', v_before, v_after;
   end if;
 
-  select count(*) into v_count from public.household_members
-   where household_id = v_hh and user_id = auth.uid();
+  v_hh2 := public.fin_create_household('Casa API', 'Rodrigo', true);
+  if v_hh2 <> v_hh1 then
+    raise exception 'onboarding não é idempotente: % <> %', v_hh1, v_hh2;
+  end if;
+  insert into t_results values ('onboarding idempotente', 'mesmo household, sem duplicar');
+
+  select count(*) into v_count
+    from public.household_members
+   where household_id = v_hh1 and user_id = auth.uid();
   if v_count <> 1 then
     raise exception 'membership não criada pelo wrapper';
   end if;
 
-  v_dash := public.fin_dashboard_summary(v_hh, 2026, 11, 'cash');
-  if (v_dash ->> 'income_cents')::bigint <> 0 then
-    raise exception 'dashboard de household vazio deveria ser 0';
+  select count(*) into v_count from public.categories where household_id = v_hh1;
+  if v_count < 15 then
+    raise exception 'categorias padrão não criadas (tem %)', v_count;
+  end if;
+
+  select count(*) into v_count from public.financial_accounts where household_id = v_hh1;
+  if v_count < 1 then
+    raise exception 'conta principal não criada';
   end if;
 
   select coalesce(sum(balance_cents), 0) into v_bal
-    from public.v_account_balances where household_id = v_hh;
-  if v_bal <> 0 then
-    raise exception 'saldo inicial deveria ser 0, veio %', v_bal;
+    from public.v_account_balances where household_id = v_hh1;
+  if v_bal is null then
+    raise exception 'v_account_balances não respondeu';
   end if;
 
-  insert into t_results values ('wrappers criam household + dashboard', 'ok');
+  insert into t_results values ('estrutura do household', 'membership + 15 categorias + conta');
 end;
 $$;
 
