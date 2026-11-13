@@ -6,6 +6,8 @@
  * Roda só no servidor (Node). PDF protegido por senha levanta PdfPasswordError.
  */
 
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
+
 export class PdfPasswordError extends Error {
   constructor() {
     super("PDF protegido por senha");
@@ -25,27 +27,6 @@ type TextItem = { str: string; transform: number[] };
 export type PositionedItem = { x: number; y: number; text: string };
 export type PositionedPage = { width: number; height: number; items: PositionedItem[] };
 
-let pdfjsPromise: Promise<typeof import("pdfjs-dist/legacy/build/pdf.mjs")> | null = null;
-
-async function loadPdfjs() {
-  if (!pdfjsPromise) {
-    pdfjsPromise = (async () => {
-      const { createRequire } = await import("node:module");
-      const { pathToFileURL } = await import("node:url");
-      const require = createRequire(import.meta.url);
-      const pdfjs = await import(pathToFileURL(require.resolve("pdfjs-dist/legacy/build/pdf.mjs")).href);
-      try {
-        pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(
-          require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs"),
-        ).href;
-      } catch {
-        // sem worker explícito o Node usa o fake worker
-      }
-      return pdfjs;
-    })();
-  }
-  return pdfjsPromise;
-}
 
 /** Reconstrói linhas visuais a partir dos itens de texto (tolerância de 2pt em Y). */
 export function groupLines(items: TextItem[], tolerance = 2): string[][] {
@@ -69,8 +50,6 @@ export function groupLines(items: TextItem[], tolerance = 2): string[][] {
 }
 
 export async function extractPdfText(data: Uint8Array, password?: string): Promise<PdfText> {
-  const pdfjs = await loadPdfjs();
-
   let doc;
   try {
     doc = await pdfjs.getDocument({
@@ -78,6 +57,7 @@ export async function extractPdfText(data: Uint8Array, password?: string): Promi
       data: new Uint8Array(data),
       password,
       useSystemFonts: true,
+      verbosity: 0,
     }).promise;
   } catch (error) {
     const name = (error as { name?: string }).name ?? "";
@@ -100,11 +80,14 @@ export async function extractPdfText(data: Uint8Array, password?: string): Promi
 
 /** Extrai itens com coordenadas (x, y) por página — base para tabelas em colunas. */
 export async function extractPdfItems(data: Uint8Array, password?: string): Promise<PositionedPage[]> {
-  const pdfjs = await loadPdfjs();
-
   let doc;
   try {
-    doc = await pdfjs.getDocument({ data: new Uint8Array(data), password, useSystemFonts: true }).promise;
+    doc = await pdfjs.getDocument({
+      data: new Uint8Array(data),
+      password,
+      useSystemFonts: true,
+      verbosity: 0,
+    }).promise;
   } catch (error) {
     const name = (error as { name?: string }).name ?? "";
     if (name === "PasswordException") throw new PdfPasswordError();
