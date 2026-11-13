@@ -7,6 +7,10 @@
  */
 
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
+// O worker precisa ser importado estaticamente: em runtime serverless o pdfjs
+// tenta carregar pdf.worker.mjs por caminho e, se ele não foi para o bundle,
+// falha com "Setting up fake worker failed".
+import "pdfjs-dist/legacy/build/pdf.worker.mjs";
 
 export class PdfPasswordError extends Error {
   constructor() {
